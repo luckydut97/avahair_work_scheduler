@@ -32,7 +32,7 @@ class ShareService {
         // 파일 공유
         await Share.shareXFiles(
           [XFile(file.path)],
-          text: '아바헤어 스케줄',
+          text: '에이바헤어 직원 스케줄러',
         );
       }
     } catch (e) {

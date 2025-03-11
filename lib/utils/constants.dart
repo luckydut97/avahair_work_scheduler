@@ -42,7 +42,7 @@ class AppTextStyles {
 }
 
 class AppStrings {
-  static const appTitle = '아바헤어 스케줄러';
+  static const appTitle = '에이바헤어 직원 스케줄러';
   static const homePage = '홈';
   static const calendarPage = '캘린더';
   static const staffPage = '스태프 관리';

@@ -35,10 +35,10 @@ class SettingsScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('아바헤어 스케줄러', style: AppTextStyles.body),
+                    const Text('에이바헤어 직원 스케줄러', style: AppTextStyles.body),
                     const Text('버전: 1.0.0', style: AppTextStyles.bodySmall),
                     const SizedBox(height: 8),
-                    const Text('© 2025 아바헤어', style: AppTextStyles.bodySmall),
+                    const Text('©2025 luckydut97', style: AppTextStyles.bodySmall),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
@@ -199,7 +199,7 @@ class SettingsScreen extends StatelessWidget {
   void _showAboutDialog(BuildContext context) {
     showAboutDialog(
       context: context,
-      applicationName: '아바헤어 스케줄러',
+      applicationName: '에이바헤어 직원 스케줄러',
       applicationVersion: '1.0.0',
       applicationIcon: const Icon(AppIcons.calendar, size: 48, color: AppColors.primary),
       applicationLegalese: '© 2025 아바헤어 All rights reserved.',

@@ -4,13 +4,13 @@ class Designer {
   final String id;
   final String name;
   List<DateTime> daysOff; // 휴무일
-  int turnOrder; // 현재 순번 (1, 2, 3, 4 등)
+  int turnOrder; // 초기 순번 (스케줄 생성 시 재배정됨)
 
   Designer({
     required this.id,
     required this.name,
     required this.daysOff,
-    required this.turnOrder,
+    this.turnOrder = 0, // 기본값 0으로 변경 (의미 없는 값)
   });
 
   Map<String, dynamic> toJson() {
@@ -27,7 +27,7 @@ class Designer {
       id: json['id'],
       name: json['name'],
       daysOff: (json['daysOff'] as List).map((date) => DateTime.parse(date)).toList(),
-      turnOrder: json['turnOrder'],
+      turnOrder: json['turnOrder'] ?? 0,
     );
   }
 

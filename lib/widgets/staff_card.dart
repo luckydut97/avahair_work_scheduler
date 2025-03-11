@@ -47,7 +47,7 @@ class _DesignerCardState extends State<DesignerCard> {
               ),
             ),
             title: Text(widget.designer.name),
-            subtitle: Text('순번: ${widget.designer.turnOrder}'),
+            // 순번 정보 표시 제거 (subtitle 제거)
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -72,7 +72,7 @@ class _DesignerCardState extends State<DesignerCard> {
           ),
           // 확장 영역 (캘린더)
           if (_isExpanded)
-            SingleChildScrollView( // 여기에 SingleChildScrollView 추가
+            SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Column(
@@ -81,8 +81,8 @@ class _DesignerCardState extends State<DesignerCard> {
                       padding: EdgeInsets.all(8.0),
                       child: Text('휴무일 선택', style: AppTextStyles.subtitle),
                     ),
-                    Container( // 캘린더를 Container로 감싸 크기 제한
-                      height: 320, // 캘린더 높이 제한
+                    Container(
+                      height: 320,
                       child: TableCalendar(
                         firstDay: DateTime.utc(2023, 1, 1),
                         lastDay: DateTime.utc(2030, 12, 31),
@@ -202,7 +202,7 @@ class _InternCardState extends State<InternCard> {
           ),
           // 확장 영역 (캘린더)
           if (_isExpanded)
-            SingleChildScrollView( // 여기에 SingleChildScrollView 추가
+            SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Column(
@@ -211,8 +211,8 @@ class _InternCardState extends State<InternCard> {
                       padding: EdgeInsets.all(8.0),
                       child: Text('휴무일 선택', style: AppTextStyles.subtitle),
                     ),
-                    Container( // 캘린더를 Container로 감싸 크기 제한
-                      height: 320, // 캘린더 높이 제한
+                    Container(
+                      height: 320,
                       child: TableCalendar(
                         firstDay: DateTime.utc(2023, 1, 1),
                         lastDay: DateTime.utc(2030, 12, 31),

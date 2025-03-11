@@ -16,8 +16,8 @@ class SchedulerService {
     final schedule = MonthlySchedule.createEmpty(year, month);
     final daysInMonth = _getDaysInMonth(year, month);
 
-    // 디자이너 순번 로테이션 초기화
-    final designerRotation = _initializeDesignerRotation(designers);
+    // 디자이너 목록
+    final designersList = List<Designer>.from(designers);
 
     // 인턴 시프트 밸런스 초기화
     final internShiftBalance = _initializeInternShiftBalance(interns, previousInternBalance);
@@ -29,8 +29,8 @@ class SchedulerService {
       // 주말(금,토,일) 확인
       final isWeekend = date.weekday >= 5; // 5=금, 6=토, 7=일
 
-      // 디자이너 순번 계산
-      final availableDesigners = designers.where((d) =>
+      // 해당 날짜에 휴무가 아닌 디자이너 필터링
+      final availableDesigners = designersList.where((d) =>
       !d.daysOff.any((off) =>
       off.year == date.year &&
           off.month == date.month &&
@@ -38,8 +38,9 @@ class SchedulerService {
       )
       ).toList();
 
-      // 디자이너 순번 배정
-      final designerTurnOrder = _assignDesignerTurn(availableDesigners, designerRotation);
+      // 공평한 순번 배분을 위해 디자이너 순서 결정
+      // 이 부분을 수정하여 한 날짜에 모든 디자이너를 순번대로 배치
+      final designerTurnOrder = _assignDesignersForDay(availableDesigners, date, day);
 
       // 인턴 시프트 배정 (주말만)
       Map<String, ShiftType> internShifts = {};
@@ -58,21 +59,13 @@ class SchedulerService {
     }
 
     // 다음 달로 이월될 밸런스 계산
-    final designerBalanceCarryover = _calculateDesignerBalanceCarryover(designers);
+    final designerBalanceCarryover = _calculateDesignerBalanceCarryover(designersList);
     final internShiftBalanceCarryover = _calculateInternShiftBalanceCarryover(internShiftBalance);
 
     return schedule.copyWith(
       designerBalanceCarryover: designerBalanceCarryover,
       internShiftBalanceCarryover: internShiftBalanceCarryover,
     );
-  }
-
-  // 디자이너 순번 초기화
-  List<Designer> _initializeDesignerRotation(List<Designer> designers) {
-    // 순번 순서대로 정렬
-    final sortedDesigners = List<Designer>.from(designers);
-    sortedDesigners.sort((a, b) => a.turnOrder.compareTo(b.turnOrder));
-    return sortedDesigners;
   }
 
   // 인턴 시프트 밸런스 초기화
@@ -100,24 +93,31 @@ class SchedulerService {
     return balance;
   }
 
-  // 디자이너 순번 배정
-  List<Designer> _assignDesignerTurn(
+  // 하루에 모든 디자이너 배정 (순번 공평 배분)
+  List<Designer> _assignDesignersForDay(
       List<Designer> availableDesigners,
-      List<Designer> designerRotation,
+      DateTime date,
+      int dayOfMonth,
       ) {
-    // 현재 순번대로 정렬된 디자이너 목록에서 휴무가 아닌 디자이너만 선택
-    final workingDesigners = designerRotation.where((d) =>
-        availableDesigners.any((a) => a.id == d.id)
-    ).toList();
+    if (availableDesigners.isEmpty) return [];
 
-    // 다음 순번 계산 (1234 -> 2341 -> 3412 -> 4123 패턴)
-    if (workingDesigners.isNotEmpty) {
-      final firstDesigner = workingDesigners.removeAt(0);
-      workingDesigners.add(firstDesigner);
+    // 각 날짜마다 디자이너 순번 순서를 다르게 하여 공평하게 배분
+    // 날짜를 기준으로 시작 위치 결정
+    final startIndex = (dayOfMonth - 1) % availableDesigners.length;
+
+    // 결과 리스트 생성
+    final result = <Designer>[];
+
+    // 시작 위치부터 끝까지
+    for (int i = 0; i < availableDesigners.length; i++) {
+      final index = (startIndex + i) % availableDesigners.length;
+      final designer = availableDesigners[index];
+      // 순번 업데이트 (위치+1이 순번)
+      designer.turnOrder = i + 1;
+      result.add(designer);
     }
 
-    // 순번대로 정렬된 결과 반환
-    return workingDesigners;
+    return result;
   }
 
   // 인턴 시프트 배정 (오전/오후)
@@ -172,8 +172,7 @@ class SchedulerService {
     final balanceCarryover = <String, int>{};
 
     for (final designer in designers) {
-      // 디자이너 순번에 따른 밸런스 계산
-      // 순번이 뒤로 갈수록 이월 밸런스에 유리하게 적용
+      // 현재 순번 상태 그대로 이월
       balanceCarryover[designer.id] = designer.turnOrder;
     }
 

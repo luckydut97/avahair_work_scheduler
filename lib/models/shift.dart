@@ -7,7 +7,7 @@ enum ShiftType {
 class DayShift {
   final DateTime date;
   final Map<String, ShiftType> internShifts; // 인턴 ID -> 근무 타입
-  final List<String> designerTurnOrder; // 디자이너 ID 순서
+  final List<String> designerTurnOrder; // 디자이너 ID들 (순번 순서대로 배열)
 
   DayShift({
     required this.date,
@@ -42,5 +42,17 @@ class DayShift {
       internShifts: shiftsMap,
       designerTurnOrder: List<String>.from(json['designerTurnOrder']),
     );
+  }
+
+  // 특정 순번의 디자이너 ID 가져오기
+  String? getDesignerIdByTurn(int turn) {
+    if (turn <= 0 || turn > designerTurnOrder.length) return null;
+    return designerTurnOrder[turn - 1];
+  }
+
+  // 특정 디자이너의 순번 가져오기
+  int getDesignerTurn(String designerId) {
+    final index = designerTurnOrder.indexOf(designerId);
+    return index >= 0 ? index + 1 : 0;
   }
 }

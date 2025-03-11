@@ -39,23 +39,55 @@ class _CalendarScreenState extends State<CalendarScreen> {
         body: Column(
           children: [
             const SizedBox(height: 8),
-            // 캘린더 헤더
+            // 캘린더 헤더 (월 표시와 함께 2주 선택 옵션)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    DateHelper.formatYearMonth(_focusedDay),
-                    style: AppTextStyles.title,
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: () {
+                          setState(() {
+                            _focusedDay = DateTime(_focusedDay.year, _focusedDay.month - 1);
+                          });
+                        },
+                      ),
+                      Text(
+                        DateHelper.formatYearMonth(_focusedDay),
+                        style: AppTextStyles.title,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: () {
+                          setState(() {
+                            _focusedDay = DateTime(_focusedDay.year, _focusedDay.month + 1);
+                          });
+                        },
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(AppIcons.share),
+                  // 주 선택 버튼을 오른쪽으로 이동
+                  TextButton(
                     onPressed: () {
-                      _shareService.captureWithLibraryAndShare(
-                          '${DateHelper.formatYearMonth(_focusedDay)} 아바헤어 스케줄'
-                      );
+                      setState(() {
+                        _calendarFormat = _calendarFormat == CalendarFormat.month
+                            ? CalendarFormat.twoWeeks
+                            : CalendarFormat.month;
+                      });
                     },
+                    child: Text(
+                      _calendarFormat == CalendarFormat.month ? '2 weeks' : 'Month',
+                      style: TextStyle(color: Theme.of(context).primaryColor),
+                    ),
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -86,19 +118,41 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   _focusedDay = focusedDay;
                 });
               },
+              headerVisible: false, // 헤더 숨기기 (커스텀 헤더를 위로 이동)
               calendarStyle: CalendarStyle(
                 outsideDaysVisible: true,
                 weekendTextStyle: const TextStyle(color: AppColors.secondary),
                 holidayTextStyle: const TextStyle(color: AppColors.secondary),
+                // 캘린더 셀 높이 조정 - 충분한 공간 확보
+                cellMargin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                cellPadding: EdgeInsets.zero,
+                // 더 높은 셀 높이 설정
+                cellAlignment: Alignment.topCenter,
               ),
               calendarBuilders: CalendarBuilders(
-                markerBuilder: (context, date, events) {
-                  return _buildCalendarDayMarkers(context, date);
+                // 날짜 셀 커스텀 (모든 타입의 날짜에 대해 동일한 빌더 사용)
+                defaultBuilder: (context, day, focusedDay) {
+                  return _buildCalendarDayCell(context, day, false, isWeekend: DateHelper.isWeekend(day));
                 },
+                selectedBuilder: (context, day, focusedDay) {
+                  return _buildCalendarDayCell(context, day, true, isWeekend: DateHelper.isWeekend(day));
+                },
+                todayBuilder: (context, day, focusedDay) {
+                  return _buildCalendarDayCell(context, day, false, isToday: true, isWeekend: DateHelper.isWeekend(day));
+                },
+                outsideBuilder: (context, day, focusedDay) {
+                  return _buildCalendarDayCell(context, day, false, isOutside: true, isWeekend: DateHelper.isWeekend(day));
+                },
+                disabledBuilder: (context, day, focusedDay) {
+                  return _buildCalendarDayCell(context, day, false, isDisabled: true, isWeekend: DateHelper.isWeekend(day));
+                },
+                // 주말 처리는 각 빌더 내에서 isWeekend 플래그로 처리
               ),
+              // 각 날짜 셀의 높이를 설정 (디자이너 표시 공간 확보)
+              rowHeight: 120, // 셀 높이 증가
             ),
             const Divider(),
-            // 선택한 날짜의 상세 정보
+            // 선택한 날짜의 상세 정보 (디자이너 순번 + 인턴 시프트)
             _buildSelectedDayDetail(),
           ],
         ),
@@ -106,53 +160,102 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  // 캘린더 날짜 마커 (스케줄 정보 표시)
-  Widget? _buildCalendarDayMarkers(BuildContext context, DateTime date) {
+  // 캘린더 날짜 셀 구성
+  Widget _buildCalendarDayCell(
+      BuildContext context,
+      DateTime date,
+      bool isSelected,
+      {bool isToday = false, bool isOutside = false, bool isDisabled = false, bool isWeekend = false}
+      ) {
+    // 날짜 텍스트 색상
+    Color textColor = isOutside ? Colors.grey.withOpacity(0.5) :
+    isWeekend ? AppColors.secondary : Colors.black87;
+
+    // 배경색
+    Color backgroundColor = isSelected ? Theme.of(context).primaryColor.withOpacity(0.2) :
+    isToday ? Theme.of(context).primaryColor.withOpacity(0.1) :
+    isWeekend ? AppColors.offDay.withOpacity(0.2) :
+    Colors.transparent;
+
+    // 디자이너 마커 배경색
+    Color markerBackgroundColor = isWeekend ?
+    AppColors.secondary.withOpacity(0.2) :
+    AppColors.primary.withOpacity(0.2);
+
+    // 디자이너 순번 정보 가져오기
     final scheduleProvider = Provider.of<ScheduleProvider>(context);
+    final designerProvider = Provider.of<DesignerProvider>(context);
     final dayShift = scheduleProvider.getDayShift(date);
 
-    if (dayShift == null) return null;
-
-    final designerProvider = Provider.of<DesignerProvider>(context);
-
-    // 해당 날짜의 디자이너 순번 정보
-    final designerTurnOrder = dayShift.designerTurnOrder;
-
-    if (designerTurnOrder.isEmpty) return null;
-
-    // Get the designer name instead of showing the ID
-    final designerId = designerTurnOrder[0];
-    final designer = designerProvider.designers.firstWhere(
-          (d) => d.id == designerId,
-      orElse: () => Designer(
-        id: designerId,
-        name: '?',
-        daysOff: [],
-        turnOrder: 1,
-      ),
-    );
-
-    // Display designer's name or first letter instead of ID
-    final displayText = designer.name.isNotEmpty ? designer.name[0] : '?';
-
-    // 마커 UI 구성
-    return Positioned(
-      bottom: 1,
-      child: Container(
-        width: 40,
-        height: 16,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: DateHelper.isWeekend(date) ? AppColors.secondary.withOpacity(0.3) : AppColors.primary.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(
-          displayText, // Display first letter of name instead of ID
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
+    List<Widget> designerMarkers = [];
+    if (dayShift != null && dayShift.designerTurnOrder.isNotEmpty) {
+      // 디자이너 마커 생성
+      designerMarkers = dayShift.designerTurnOrder.map((designerId) {
+        final designer = designerProvider.designers.firstWhere(
+              (d) => d.id == designerId,
+          orElse: () => Designer(
+            id: designerId,
+            name: '?',
+            daysOff: [],
+            turnOrder: 0,
           ),
-        ),
+        );
+
+        // 디자이너 이름 첫 글자 또는 전체 이름
+        final displayText = designer.name.isNotEmpty ? designer.name[0] : '?';
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 1),
+          child: Container(
+            width: double.infinity,
+            height: 16,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: markerBackgroundColor,
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: Text(
+              displayText,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        );
+      }).toList();
+    }
+
+    return Container(
+      margin: const EdgeInsets.all(1),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 날짜 표시
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 2),
+            child: Text(
+              '${date.day}',
+              style: TextStyle(
+                color: textColor,
+                fontWeight: isToday || isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ),
+          // 디자이너 마커 표시 (스크롤 가능하게)
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: designerMarkers,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -172,18 +275,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    DateHelper.formatDateWithDay(_selectedDay!),
-                    style: AppTextStyles.subtitle,
+                  // 날짜와 공유 버튼을 나란히 배치
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        DateHelper.formatDateWithDay(_selectedDay!),
+                        style: AppTextStyles.subtitle,
+                      ),
+                      IconButton(
+                        icon: const Icon(AppIcons.share),
+                        onPressed: () {
+                          _shareService.captureWithLibraryAndShare(
+                              '${DateHelper.formatYearMonth(_focusedDay)} 아바헤어 스케줄'
+                          );
+                        },
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
+
                   // 디자이너 순번 정보
                   const Text('디자이너 순번', style: AppTextStyles.subtitle),
                   const SizedBox(height: 8),
-                  _buildDesignerTurnList(dayShift, designerProvider),
-                  const SizedBox(height: 16),
+                  _buildFullDesignerTurnList(dayShift, designerProvider),
+
                   // 인턴 시프트 정보 (주말인 경우만)
                   if (DateHelper.isWeekend(_selectedDay!)) ...[
+                    const SizedBox(height: 16),
                     const Text('인턴 근무', style: AppTextStyles.subtitle),
                     const SizedBox(height: 8),
                     _buildInternShiftList(dayShift, internProvider),
@@ -198,7 +317,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   // 디자이너 순번 목록 위젯
-  Widget _buildDesignerTurnList(DayShift? dayShift, DesignerProvider designerProvider) {
+  Widget _buildFullDesignerTurnList(DayShift? dayShift, DesignerProvider designerProvider) {
     if (dayShift == null || dayShift.designerTurnOrder.isEmpty) {
       return const Card(
         child: Padding(
@@ -208,43 +327,54 @@ class _CalendarScreenState extends State<CalendarScreen> {
       );
     }
 
+    // 디자이너 전체 목록
     return Card(
-      child: Container( // 컨테이너로 감싸서 크기 제한
-        constraints: BoxConstraints(maxHeight: 200), // 최대 높이 설정
-        child: ListView.builder(
-          shrinkWrap: true,
-          physics: const AlwaysScrollableScrollPhysics(), // 스크롤 가능하도록 변경
-          itemCount: dayShift.designerTurnOrder.length,
-          itemBuilder: (context, index) {
-            final designerId = dayShift.designerTurnOrder[index];
-            final designer = designerProvider.designers.firstWhere(
-                  (d) => d.id == designerId,
-              orElse: () => Designer(
-                id: designerId,
-                name: '알 수 없음',
-                daysOff: [],
-                turnOrder: index + 1,
-              ),
-            );
-
-            return ListTile(
-              leading: CircleAvatar(
-                backgroundColor: AppColors.primary,
-                child: Text(
-                  '${index + 1}',
-                  style: const TextStyle(color: Colors.white),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: List.generate(
+            dayShift.designerTurnOrder.length,
+                (index) {
+              final designerId = dayShift.designerTurnOrder[index];
+              final designer = designerProvider.designers.firstWhere(
+                    (d) => d.id == designerId,
+                orElse: () => Designer(
+                  id: designerId,
+                  name: '알 수 없음',
+                  daysOff: [],
+                  turnOrder: index + 1,
                 ),
-              ),
-              title: Text(designer.name),
-              subtitle: Text('순번: ${designer.turnOrder}'),
-            );
-          },
+              );
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: AppColors.primary,
+                      child: Text(
+                        '${index + 1}',
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      designer.name,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
-// 인턴 시프트 목록 위젯
+  // 인턴 시프트 목록 위젯
   Widget _buildInternShiftList(DayShift? dayShift, InternProvider internProvider) {
     if (dayShift == null || dayShift.internShifts.isEmpty) {
       return const Card(
@@ -256,14 +386,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
 
     return Card(
-      child: Container( // 컨테이너로 감싸서 크기 제한
-        constraints: BoxConstraints(maxHeight: 200), // 최대 높이 설정
-        child: ListView.builder(
-          shrinkWrap: true,
-          physics: const AlwaysScrollableScrollPhysics(), // 스크롤 가능하도록 변경
-          itemCount: dayShift.internShifts.length,
-          itemBuilder: (context, index) {
-            final entry = dayShift.internShifts.entries.elementAt(index);
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: dayShift.internShifts.entries.map((entry) {
             final internId = entry.key;
             final shiftType = entry.value;
 
@@ -277,18 +404,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
             );
 
-            return ListTile(
-              leading: CircleAvatar(
-                backgroundColor: ShiftHelper.getShiftColor(shiftType),
-                child: Icon(
-                  ShiftHelper.getShiftIcon(shiftType),
-                  color: Colors.white,
-                ),
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: ShiftHelper.getShiftColor(shiftType),
+                    child: Icon(
+                      ShiftHelper.getShiftIcon(shiftType),
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    '${intern.name} (${ShiftHelper.getShiftText(shiftType)})',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
               ),
-              title: Text(intern.name),
-              subtitle: Text(ShiftHelper.getShiftText(shiftType)),
             );
-          },
+          }).toList(),
         ),
       ),
     );

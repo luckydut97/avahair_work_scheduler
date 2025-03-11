@@ -92,7 +92,7 @@ class _StaffScreenState extends State<StaffScreen> with SingleTickerProviderStat
                 border: OutlineInputBorder(),
               ),
             ),
-            // 추가 필드 (순번, 휴무일 등)은 여기에 구현
+            // 추가 필드 (순번, 휴무일 등)는 여기에 구현
           ],
         ),
         actions: [
@@ -112,11 +112,12 @@ class _StaffScreenState extends State<StaffScreen> with SingleTickerProviderStat
                 final updatedDesigner = designer!.copyWith(name: name);
                 designerProvider.updateDesigner(updatedDesigner);
               } else {
+                // 순번은 0으로 설정 (의미 없는 값)
                 final newDesigner = Designer(
                   id: IDGenerator.generate(),
                   name: name,
                   daysOff: [],
-                  turnOrder: designerProvider.designers.length + 1,
+                  turnOrder: 0, // 스케줄 생성 시 재배정됨
                 );
                 designerProvider.addDesigner(newDesigner);
               }
@@ -152,7 +153,7 @@ class _StaffScreenState extends State<StaffScreen> with SingleTickerProviderStat
                 border: OutlineInputBorder(),
               ),
             ),
-            // 추가 필드 (휴무일 등)은 여기에 구현
+            // 추가 필드 (휴무일 등)는 여기에 구현
           ],
         ),
         actions: [
@@ -210,7 +211,7 @@ class _DesignerTab extends StatelessWidget {
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
-          physics: const AlwaysScrollableScrollPhysics(), // 이 줄 추가
+          physics: const AlwaysScrollableScrollPhysics(),
           itemCount: designers.length,
           itemBuilder: (context, index) {
             final designer = designers[index];
